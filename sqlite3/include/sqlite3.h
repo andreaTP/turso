@@ -177,6 +177,8 @@ int sqlite3_column_count(sqlite3_stmt *_stmt);
 
 const char *sqlite3_column_decltype(sqlite3_stmt *_stmt, int _idx);
 
+const char *sqlite3_column_table_name(sqlite3_stmt *_stmt, int _idx);
+
 const char *sqlite3_column_name(sqlite3_stmt *_stmt, int _idx);
 
 int64_t sqlite3_column_int64(sqlite3_stmt *_stmt, int _idx);
