@@ -77,6 +77,8 @@ extern "C" {
     fn sqlite3_column_type(stmt: *mut sqlite3_stmt, idx: i32) -> i32;
     fn sqlite3_column_decltype(stmt: *mut sqlite3_stmt, idx: i32) -> *const libc::c_char;
     fn sqlite3_get_autocommit(db: *mut sqlite3) -> i32;
+    fn sqlite3_changes(db: *mut sqlite3) -> i32;
+    fn sqlite3_changes64(db: *mut sqlite3) -> i64;
 }
 
 const SQLITE_OK: i32 = 0;
@@ -1314,6 +1316,79 @@ mod tests {
             // Should be no statements left
             let iter = sqlite3_next_stmt(db, ptr::null_mut());
             assert!(iter.is_null());
+
+            assert_eq!(sqlite3_close(db), SQLITE_OK);
+        }
+    }
+
+    #[test]
+    fn test_sqlite3_changes() {
+        unsafe {
+            let temp_file = tempfile::NamedTempFile::with_suffix(".db").unwrap();
+            let path = std::ffi::CString::new(temp_file.path().to_str().unwrap()).unwrap();
+            let mut db = ptr::null_mut();
+            assert_eq!(sqlite3_open(path.as_ptr(), &mut db), SQLITE_OK);
+
+            // Initially no changes
+            assert_eq!(sqlite3_changes(db), 0);
+            assert_eq!(sqlite3_changes64(db), 0);
+
+            // Create a table
+            let mut stmt = ptr::null_mut();
+            assert_eq!(
+                sqlite3_prepare_v2(
+                    db,
+                    c"CREATE TABLE test_changes (id INTEGER PRIMARY KEY, value TEXT)".as_ptr(),
+                    -1,
+                    &mut stmt,
+                    ptr::null_mut(),
+                ),
+                SQLITE_OK
+            );
+            assert_eq!(sqlite3_step(stmt), SQLITE_DONE);
+            assert_eq!(sqlite3_finalize(stmt), SQLITE_OK);
+
+            // Still no changes after CREATE TABLE
+            assert_eq!(sqlite3_changes(db), 0);
+            assert_eq!(sqlite3_changes64(db), 0);
+
+            // Insert a single row
+            let mut stmt = ptr::null_mut();
+            assert_eq!(
+                sqlite3_prepare_v2(
+                    db,
+                    c"INSERT INTO test_changes (value) VALUES ('test1')".as_ptr(),
+                    -1,
+                    &mut stmt,
+                    ptr::null_mut(),
+                ),
+                SQLITE_OK
+            );
+            assert_eq!(sqlite3_step(stmt), SQLITE_DONE);
+            assert_eq!(sqlite3_finalize(stmt), SQLITE_OK);
+
+            // Should have 1 change
+            assert_eq!(sqlite3_changes(db), 1);
+            assert_eq!(sqlite3_changes64(db), 1);
+
+            // Insert multiple rows
+            let mut stmt = ptr::null_mut();
+            assert_eq!(
+                sqlite3_prepare_v2(
+                    db,
+                    c"INSERT INTO test_changes (value) VALUES ('test2'), ('test3'), ('test4')".as_ptr(),
+                    -1,
+                    &mut stmt,
+                    ptr::null_mut(),
+                ),
+                SQLITE_OK
+            );
+            assert_eq!(sqlite3_step(stmt), SQLITE_DONE);
+            assert_eq!(sqlite3_finalize(stmt), SQLITE_OK);
+
+            // Should have 3 changes
+            assert_eq!(sqlite3_changes(db), 3);
+            assert_eq!(sqlite3_changes64(db), 3);
 
             assert_eq!(sqlite3_close(db), SQLITE_OK);
         }

@@ -103,6 +103,8 @@ int sqlite3_reset(sqlite3_stmt *stmt);
 
 int sqlite3_changes(sqlite3 *_db);
 
+int64_t sqlite3_changes64(sqlite3 *_db);
+
 int sqlite3_stmt_readonly(sqlite3_stmt *_stmt);
 
 int sqlite3_stmt_busy(sqlite3_stmt *_stmt);

@@ -400,6 +400,13 @@ pub unsafe extern "C" fn sqlite3_changes(db: *mut sqlite3) -> ffi::c_int {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn sqlite3_changes64(db: *mut sqlite3) -> i64 {
+    let db: &mut sqlite3 = &mut *db;
+    let inner = db.inner.lock().unwrap();
+    inner.conn.changes()
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn sqlite3_stmt_readonly(_stmt: *mut sqlite3_stmt) -> ffi::c_int {
     stub!();
 }
